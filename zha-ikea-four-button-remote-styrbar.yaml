@@ -1,0 +1,689 @@
+blueprint:
+  name: ZHA – IKEA STYRBAR erweitert mit 12 Farben & Weißtönen
+  description: >
+    Erweiterter IKEA STYRBAR (square) Remote-Blueprint für ZHA mit:
+    
+    • UP/DOWN (short): ON / OFF mit konfigurierbaren Transitions
+    • UP/DOWN (hold): schnelle und sanfte Helligkeitssteuerung
+    • LEFT/RIGHT (short): Zyklus durch 12 voreingestellte Farben (RGB oder Weißton mit Farbtemperatur)
+    • LEFT/RIGHT (long press): optionale benutzerdefinierte Aktionen
+    • Unterstützung für RGB-Farben UND Weißtöne mit Farbtemperatur
+    • Konfigurierbare Transition Times für An/Aus/Farbwechsel
+    • 12 Farben: 3 Weißtöne (warm/neutral/kalt) + 9 RGB-Farben im Farbkreis
+    
+    Setup:
+    1) Erstellen Sie einen *input_text* Helper für den Farbzustand (speichert JSON).
+       Beispiel: input_text.styrbar_color_state
+    2) Wählen Sie für jede der 12 Farben zwischen RGB oder Weißton aus.
+    3) Konfigurieren Sie die Transition-Zeiten nach Ihren Wünschen.
+
+  domain: automation
+
+  input:
+    remote:
+      name: Remote (ZHA device)
+      selector:
+        device:
+          integration: zha
+          manufacturer: IKEA of Sweden
+          model: Remote Control N2
+          multiple: false
+
+    light:
+      name: Light(s)
+      selector:
+        target:
+          entity:
+            domain: light
+
+    # Speichert den aktuellen Farbzustand als JSON
+    color_state_helper:
+      name: Farbzustands-Helper (JSON)
+      description: Erstellen/wählen Sie einen input_text Helper zum Speichern des aktuellen Farbzustands als JSON.
+      default: input_text.styrbar_color_state
+      selector:
+        entity:
+          domain: input_text
+
+    # Transition Times
+    transition_on:
+      name: Transition Zeit beim Einschalten (s)
+      description: Übergangszeit in Sekunden beim Einschalten der Lampe.
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          unit_of_measurement: s
+          mode: slider
+
+    transition_off:
+      name: Transition Zeit beim Ausschalten (s)
+      description: Übergangszeit in Sekunden beim Ausschalten der Lampe.
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          unit_of_measurement: s
+          mode: slider
+
+    transition_color:
+      name: Transition Zeit bei Farbwechsel (s)
+      description: Übergangszeit in Sekunden beim Wechsel der Farbe/Farbtemperatur.
+      default: 0.3
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          unit_of_measurement: s
+          mode: slider
+
+    # 12-Farben-Palette mit Typ-Auswahl
+    # Farbe 1: Warmweiß
+    palette_1_type:
+      name: Farbe 1 - Typ (Warmweiß)
+      default: white
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color1_rgb:
+      name: Farbe 1 - RGB Wert
+      default: [255, 147, 41]
+      selector:
+        color_rgb: {}
+
+    palette_color1_kelvin:
+      name: Farbe 1 - Farbtemperatur (Kelvin)
+      description: Farbtemperatur in Kelvin (nur wenn Typ = Weißton)
+      default: 2700
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 2: Neutralweiß
+    palette_2_type:
+      name: Farbe 2 - Typ (Neutralweiß)
+      default: white
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color2_rgb:
+      name: Farbe 2 - RGB Wert
+      default: [255, 214, 170]
+      selector:
+        color_rgb: {}
+
+    palette_color2_kelvin:
+      name: Farbe 2 - Farbtemperatur (Kelvin)
+      default: 4500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 3: Kaltweiß
+    palette_3_type:
+      name: Farbe 3 - Typ (Kaltweiß)
+      default: white
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color3_rgb:
+      name: Farbe 3 - RGB Wert
+      default: [255, 249, 253]
+      selector:
+        color_rgb: {}
+
+    palette_color3_kelvin:
+      name: Farbe 3 - Farbtemperatur (Kelvin)
+      default: 6500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 4: Rot
+    palette_4_type:
+      name: Farbe 4 - Typ (Rot)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color4_rgb:
+      name: Farbe 4 - RGB Wert
+      default: [255, 0, 0]
+      selector:
+        color_rgb: {}
+
+    palette_color4_kelvin:
+      name: Farbe 4 - Farbtemperatur (Kelvin)
+      default: 3000
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 5: Orange
+    palette_5_type:
+      name: Farbe 5 - Typ (Orange)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color5_rgb:
+      name: Farbe 5 - RGB Wert
+      default: [255, 128, 0]
+      selector:
+        color_rgb: {}
+
+    palette_color5_kelvin:
+      name: Farbe 5 - Farbtemperatur (Kelvin)
+      default: 3500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 6: Gelb
+    palette_6_type:
+      name: Farbe 6 - Typ (Gelb)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color6_rgb:
+      name: Farbe 6 - RGB Wert
+      default: [255, 255, 0]
+      selector:
+        color_rgb: {}
+
+    palette_color6_kelvin:
+      name: Farbe 6 - Farbtemperatur (Kelvin)
+      default: 4000
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 7: Grün
+    palette_7_type:
+      name: Farbe 7 - Typ (Grün)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color7_rgb:
+      name: Farbe 7 - RGB Wert
+      default: [0, 255, 0]
+      selector:
+        color_rgb: {}
+
+    palette_color7_kelvin:
+      name: Farbe 7 - Farbtemperatur (Kelvin)
+      default: 4500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 8: Türkis
+    palette_8_type:
+      name: Farbe 8 - Typ (Türkis)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color8_rgb:
+      name: Farbe 8 - RGB Wert
+      default: [0, 255, 128]
+      selector:
+        color_rgb: {}
+
+    palette_color8_kelvin:
+      name: Farbe 8 - Farbtemperatur (Kelvin)
+      default: 5000
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 9: Cyan
+    palette_9_type:
+      name: Farbe 9 - Typ (Cyan)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color9_rgb:
+      name: Farbe 9 - RGB Wert
+      default: [0, 255, 255]
+      selector:
+        color_rgb: {}
+
+    palette_color9_kelvin:
+      name: Farbe 9 - Farbtemperatur (Kelvin)
+      default: 5500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 10: Blau
+    palette_10_type:
+      name: Farbe 10 - Typ (Blau)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color10_rgb:
+      name: Farbe 10 - RGB Wert
+      default: [0, 0, 255]
+      selector:
+        color_rgb: {}
+
+    palette_color10_kelvin:
+      name: Farbe 10 - Farbtemperatur (Kelvin)
+      default: 6000
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 11: Magenta
+    palette_11_type:
+      name: Farbe 11 - Typ (Magenta)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color11_rgb:
+      name: Farbe 11 - RGB Wert
+      default: [255, 0, 255]
+      selector:
+        color_rgb: {}
+
+    palette_color11_kelvin:
+      name: Farbe 11 - Farbtemperatur (Kelvin)
+      default: 6200
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Farbe 12: Pink
+    palette_12_type:
+      name: Farbe 12 - Typ (Pink)
+      default: rgb
+      selector:
+        select:
+          options:
+            - label: RGB Farbe
+              value: rgb
+            - label: Weißton (Farbtemperatur)
+              value: white
+
+    palette_color12_rgb:
+      name: Farbe 12 - RGB Wert
+      default: [255, 0, 128]
+      selector:
+        color_rgb: {}
+
+    palette_color12_kelvin:
+      name: Farbe 12 - Farbtemperatur (Kelvin)
+      default: 6500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 100
+          unit_of_measurement: K
+          mode: slider
+
+    # Hold-Verhalten (Tuning)
+    tick_ms:
+      name: Tick-Intervall (ms)
+      description: Zeit zwischen Helligkeitsschritten beim Halten. Kleiner = schneller/flüssiger.
+      default: 10
+      selector:
+        number:
+          min: 5
+          max: 200
+          step: 5
+          unit_of_measurement: ms
+          mode: slider
+
+    step_pct:
+      name: Schrittgröße (% pro Tick)
+      description: Helligkeitsänderung pro Tick beim Halten.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          step: 1
+          unit_of_measurement: '%'
+          mode: slider
+
+    # Optionale benutzerdefinierte Aktionen bei langem Drücken von LEFT/RIGHT
+    button_left_long:
+      name: Linke Taste – langer Druck (benutzerdefinierte Aktion)
+      default: []
+      selector:
+        action: {}
+
+    button_right_long:
+      name: Rechte Taste – langer Druck (benutzerdefinierte Aktion)
+      default: []
+      selector:
+        action: {}
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote
+
+action:
+  - variables:
+      color_state_entity: !input color_state_helper
+      tick_ms_input: !input tick_ms
+      step_pct_input: !input step_pct
+      trans_on: !input transition_on
+      trans_off: !input transition_off
+      trans_color: !input transition_color
+
+      tick_s: "{{ (tick_ms_input | float(10)) / 1000 }}"
+      step_up: "{{ step_pct_input | int(5) }}"
+      step_down: "{{ (step_pct_input | int(5)) * -1 }}"
+      cap_ticks: 1200
+
+      cmd: "{{ trigger.event.data.command }}"
+      cluster: "{{ trigger.event.data.cluster_id }}"
+      args: "{{ trigger.event.data.args | default([]) }}"
+
+      # Palette-Konfiguration als Dictionary (12 Farben)
+      palette:
+        "1":
+          type: !input palette_1_type
+          rgb: !input palette_color1_rgb
+          kelvin: !input palette_color1_kelvin
+        "2":
+          type: !input palette_2_type
+          rgb: !input palette_color2_rgb
+          kelvin: !input palette_color2_kelvin
+        "3":
+          type: !input palette_3_type
+          rgb: !input palette_color3_rgb
+          kelvin: !input palette_color3_kelvin
+        "4":
+          type: !input palette_4_type
+          rgb: !input palette_color4_rgb
+          kelvin: !input palette_color4_kelvin
+        "5":
+          type: !input palette_5_type
+          rgb: !input palette_color5_rgb
+          kelvin: !input palette_color5_kelvin
+        "6":
+          type: !input palette_6_type
+          rgb: !input palette_color6_rgb
+          kelvin: !input palette_color6_kelvin
+        "7":
+          type: !input palette_7_type
+          rgb: !input palette_color7_rgb
+          kelvin: !input palette_color7_kelvin
+        "8":
+          type: !input palette_8_type
+          rgb: !input palette_color8_rgb
+          kelvin: !input palette_color8_kelvin
+        "9":
+          type: !input palette_9_type
+          rgb: !input palette_color9_rgb
+          kelvin: !input palette_color9_kelvin
+        "10":
+          type: !input palette_10_type
+          rgb: !input palette_color10_rgb
+          kelvin: !input palette_color10_kelvin
+        "11":
+          type: !input palette_11_type
+          rgb: !input palette_color11_rgb
+          kelvin: !input palette_color11_kelvin
+        "12":
+          type: !input palette_12_type
+          rgb: !input palette_color12_rgb
+          kelvin: !input palette_color12_kelvin
+
+  - choose:
+
+      # --- UP short → ON ---
+      - conditions: "{{ cluster == 6 and cmd == 'on' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              transition: "{{ trans_on }}"
+
+      # --- DOWN short → OFF ---
+      - conditions: "{{ cluster == 6 and cmd == 'off' }}"
+        sequence:
+          - service: light.turn_off
+            target: !input light
+            data:
+              transition: "{{ trans_off }}"
+
+      # --- HOLD UP (brightness +) ---
+      - conditions: "{{ cluster == 8 and cmd == 'move_with_on_off' }}"
+        sequence:
+          - variables: { _i: 0 }
+          - repeat:
+              sequence:
+                - wait_for_trigger:
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "stop" }
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "stop_with_on_off" }
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "move" }
+                  timeout: "{{ tick_s }}"
+                  continue_on_timeout: true
+                - choose:
+                    - conditions: "{{ not wait.completed }}"
+                      sequence:
+                        - service: light.turn_on
+                          target: !input light
+                          data: { brightness_step_pct: "{{ step_up }}", transition: 0 }
+                        - variables: { _i: "{{ _i + 1 }}" }
+              until:
+                - condition: template
+                  value_template: "{{ wait.completed or (_i | int) >= (cap_ticks | int) }}"
+
+      # --- HOLD DOWN (brightness −) ---
+      - conditions: "{{ cluster == 8 and cmd == 'move' }}"
+        sequence:
+          - variables: { _i: 0 }
+          - repeat:
+              sequence:
+                - wait_for_trigger:
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "stop" }
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "stop_with_on_off" }
+                    - platform: event
+                      event_type: zha_event
+                      event_data: { device_id: !input remote, cluster_id: 8, command: "move_with_on_off" }
+                  timeout: "{{ tick_s }}"
+                  continue_on_timeout: true
+                - choose:
+                    - conditions: "{{ not wait.completed }}"
+                      sequence:
+                        - service: light.turn_on
+                          target: !input light
+                          data: { brightness_step_pct: "{{ step_down }}", transition: 0 }
+                        - variables: { _i: "{{ _i + 1 }}" }
+              until:
+                - condition: template
+                  value_template: "{{ wait.completed or (_i | int) >= (cap_ticks | int) }}"
+
+      # --- LEFT/RIGHT short → palette cycle (wrap) mit 12 Farben ---
+      - conditions: "{{ cluster == 5 and cmd == 'press' and args in [[256,13,0],[257,13,0]] }}"
+        sequence:
+          - variables:
+              # Aktuellen Zustand aus Helper laden
+              curr_state_raw: "{{ states(color_state_entity) }}"
+              curr_state: >
+                {% set raw = states(color_state_entity) %}
+                {% if raw in ['unknown', 'unavailable', '', 'none', None] %}
+                  {{ {'index': 1} }}
+                {% else %}
+                  {% set parsed = raw | from_json(default={'index': 1}) %}
+                  {{ parsed if parsed is mapping else {'index': 1} }}
+                {% endif %}
+              curr_idx: "{{ curr_state.index | int(1) }}"
+              
+              # Nächsten Index berechnen (1-12)
+              next_idx: >
+                {% if args == [256,13,0] %}
+                  {{ 1 if curr_idx >= 12 else curr_idx + 1 }}
+                {% else %}
+                  {{ 12 if curr_idx <= 1 else curr_idx - 1 }}
+                {% endif %}
+              
+              # Aktuelle Palette-Einstellung holen
+              next_palette: "{{ palette[next_idx | string] }}"
+              next_type: "{{ next_palette.type }}"
+
+          # Speichere neuen Zustand (als einfacher String ohne tojson)
+          - service: input_text.set_value
+            target: { entity_id: !input color_state_helper }
+            data: 
+              value: >
+                {"index": {{ next_idx }}, "type": "{{ next_type }}", "rgb": {{ next_palette.rgb | list }}, "kelvin": {{ next_palette.kelvin }}}
+
+          # Setze Licht entsprechend des Typs
+          - choose:
+              - conditions: "{{ next_type == 'rgb' }}"
+                sequence:
+                  - service: light.turn_on
+                    target: !input light
+                    data:
+                      rgb_color: "{{ next_palette.rgb }}"
+                      brightness_pct: 100
+                      transition: "{{ trans_color }}"
+              
+              - conditions: "{{ next_type == 'white' }}"
+                sequence:
+                  - service: light.turn_on
+                    target: !input light
+                    data:
+                      kelvin: "{{ next_palette.kelvin }}"
+                      brightness_pct: 100
+                      transition: "{{ trans_color }}"
+
+      # --- LEFT/RIGHT long press (optional custom) ---
+      - conditions: "{{ cluster == 5 and cmd == 'hold' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ args == [3329, 0] }}"
+                sequence: !input button_left_long
+              - conditions: "{{ args == [3328, 0] }}"
+                sequence: !input button_right_long
