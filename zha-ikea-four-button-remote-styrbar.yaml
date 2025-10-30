@@ -4,16 +4,16 @@ blueprint:
     Erweiterter IKEA STYRBAR (square) Remote-Blueprint für ZHA mit:
     
     • UP/DOWN (short): ON / OFF mit konfigurierbaren Transitions
-    • UP/DOWN (hold): schnelle und sanfte Helligkeitssteuerung
+    • UP/DOWN (hold): schnelle und sanfte Helligkeitssteuerung mit Transition
     • LEFT/RIGHT (short): Zyklus durch 12 voreingestellte Farben (RGB oder Weißton mit Farbtemperatur)
     • LEFT/RIGHT (long press): optionale benutzerdefinierte Aktionen
     • Unterstützung für RGB-Farben UND Weißtöne mit Farbtemperatur
-    • Konfigurierbare Transition Times für An/Aus/Farbwechsel
+    • Konfigurierbare Transition Times für An/Aus/Dimmen/Farbwechsel
     • 12 Farben: 3 Weißtöne (warm/neutral/kalt) + 9 RGB-Farben im Farbkreis
     
     Setup:
-    1) Erstellen Sie einen *input_text* Helper für den Farbzustand (speichert JSON).
-       Beispiel: input_text.styrbar_color_state
+    1) Erstellen Sie einen *input_number* Helper für den Farbindex (1-12).
+       Beispiel: input_number.styrbar_color_index (min: 1, max: 12, step: 1)
     2) Wählen Sie für jede der 12 Farben zwischen RGB oder Weißton aus.
     3) Konfigurieren Sie die Transition-Zeiten nach Ihren Wünschen.
 
@@ -36,14 +36,14 @@ blueprint:
           entity:
             domain: light
 
-    # Speichert den aktuellen Farbzustand als JSON
-    color_state_helper:
-      name: Farbzustands-Helper (JSON)
-      description: Erstellen/wählen Sie einen input_text Helper zum Speichern des aktuellen Farbzustands als JSON.
-      default: input_text.styrbar_color_state
+    # Speichert den aktuellen Farbindex (1-12)
+    color_index_helper:
+      name: Farbindex-Helper (1-12)
+      description: Erstellen/wählen Sie einen input_number Helper (min=1, max=12, step=1).
+      default: input_number.styrbar_color_index
       selector:
         entity:
-          domain: input_text
+          domain: input_number
 
     # Transition Times
     transition_on:
@@ -67,6 +67,18 @@ blueprint:
           min: 0
           max: 10
           step: 0.1
+          unit_of_measurement: s
+          mode: slider
+
+    transition_brightness:
+      name: Transition Zeit beim Dimmen (s)
+      description: Übergangszeit in Sekunden für jeden Helligkeitsschritt beim Halten der Tasten.
+      default: 0.1
+      selector:
+        number:
+          min: 0
+          max: 2
+          step: 0.05
           unit_of_measurement: s
           mode: slider
 
@@ -481,11 +493,12 @@ trigger:
 
 action:
   - variables:
-      color_state_entity: !input color_state_helper
+      color_index_entity: !input color_index_helper
       tick_ms_input: !input tick_ms
       step_pct_input: !input step_pct
       trans_on: !input transition_on
       trans_off: !input transition_off
+      trans_brightness: !input transition_brightness
       trans_color: !input transition_color
 
       tick_s: "{{ (tick_ms_input | float(10)) / 1000 }}"
@@ -589,7 +602,9 @@ action:
                       sequence:
                         - service: light.turn_on
                           target: !input light
-                          data: { brightness_step_pct: "{{ step_up }}", transition: 0 }
+                          data: 
+                            brightness_step_pct: "{{ step_up }}"
+                            transition: "{{ trans_brightness }}"
                         - variables: { _i: "{{ _i + 1 }}" }
               until:
                 - condition: template
@@ -618,7 +633,9 @@ action:
                       sequence:
                         - service: light.turn_on
                           target: !input light
-                          data: { brightness_step_pct: "{{ step_down }}", transition: 0 }
+                          data: 
+                            brightness_step_pct: "{{ step_down }}"
+                            transition: "{{ trans_brightness }}"
                         - variables: { _i: "{{ _i + 1 }}" }
               until:
                 - condition: template
@@ -628,19 +645,10 @@ action:
       - conditions: "{{ cluster == 5 and cmd == 'press' and args in [[256,13,0],[257,13,0]] }}"
         sequence:
           - variables:
-              # Aktuellen Zustand aus Helper laden
-              curr_state_raw: "{{ states(color_state_entity) }}"
-              curr_state: >
-                {% set raw = states(color_state_entity) %}
-                {% if raw in ['unknown', 'unavailable', '', 'none', None] %}
-                  {{ {'index': 1} }}
-                {% else %}
-                  {% set parsed = raw | from_json(default={'index': 1}) %}
-                  {{ parsed if parsed is mapping else {'index': 1} }}
-                {% endif %}
-              curr_idx: "{{ curr_state.index | int(1) }}"
+              # Aktuellen Index aus Helper laden (einfacher Integer-Wert)
+              curr_idx: "{{ states(color_index_entity) | int(1) }}"
               
-              # Nächsten Index berechnen (1-12)
+              # Nächsten Index berechnen (1-12 mit Wrap-Around)
               next_idx: >
                 {% if args == [256,13,0] %}
                   {{ 1 if curr_idx >= 12 else curr_idx + 1 }}
@@ -652,12 +660,11 @@ action:
               next_palette: "{{ palette[next_idx | string] }}"
               next_type: "{{ next_palette.type }}"
 
-          # Speichere neuen Zustand (als einfacher String ohne tojson)
-          - service: input_text.set_value
-            target: { entity_id: !input color_state_helper }
+          # Speichere neuen Index (einfache Zahl)
+          - service: input_number.set_value
+            target: { entity_id: !input color_index_helper }
             data: 
-              value: >
-                {"index": {{ next_idx }}, "type": "{{ next_type }}", "rgb": {{ next_palette.rgb | list }}, "kelvin": {{ next_palette.kelvin }}}
+              value: "{{ next_idx }}"
 
           # Setze Licht entsprechend des Typs
           - choose:
